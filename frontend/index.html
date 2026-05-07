@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TalentBridge — Job Search Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f4f2ee; --surface:#ffffff; --border:#e0ddd6; --navy:#0a2342;
+  --blue:#0b66c2; --blue-lt:#e8f0fa; --green:#057642; --green-lt:#e7f3ec;
+  --amber:#b45309; --amber-lt:#fef3c7; --red:#cc1016; --red-lt:#fdecea;
+  --text:#191919; --muted:#666; --lighter:#999;
+  --radius:8px; --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.05);
+  --shadow-md:0 4px 24px rgba(0,0,0,.12);
+  --font-d:'Fraunces',Georgia,serif; --font-b:'DM Sans',sans-serif;
+}
+body { background:var(--bg); color:var(--text); font-family:var(--font-b); font-size:14px; line-height:1.5; min-height:100vh; }
+
+/* MODE BAR */
+.mode-bar { background:var(--navy); display:flex; align-items:center; justify-content:space-between; padding:0 32px; height:52px; position:sticky; top:0; z-index:200; }
+.logo-mark { font-family:var(--font-d); font-size:20px; font-weight:700; color:#fff; }
+.logo-mark em { color:#f0c040; font-style:normal; }
+.mode-tabs { display:flex; gap:4px; }
+.mode-tab { padding:7px 18px; border-radius:20px; border:none; font-family:var(--font-b); font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; color:rgba(255,255,255,.65); background:transparent; }
+.mode-tab:hover { color:#fff; background:rgba(255,255,255,.1); }
+.mode-tab.active { background:#fff; color:var(--navy); }
+
+/* MODES */
+.mode { display:none; }
+.mode.active { display:block; animation:rise .3s ease; }
+@keyframes rise { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* SEEKER LAYOUT */
+.seeker-wrap { max-width:1140px; margin:0 auto; padding:24px 20px; display:grid; grid-template-columns:260px 1fr 290px; gap:20px; align-items:start; }
+@media(max-width:1060px){.seeker-wrap{grid-template-columns:220px 1fr}.right-sidebar{display:none}}
+@media(max-width:720px){.seeker-wrap{grid-template-columns:1fr}}
+
+/* SIDEBAR PROFILE CARD */
+.profile-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); margin-bottom:12px; }
+.pc-banner { background:linear-gradient(135deg,var(--navy) 0%,#1e3f6e 100%); height:60px; position:relative; }
+.pc-avatar { width:60px; height:60px; border-radius:50%; border:3px solid #fff; background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-d); font-size:20px; font-weight:700; position:absolute; bottom:-26px; left:14px; }
+.pc-info { padding:34px 14px 14px; }
+.pc-name { font-weight:600; font-size:15px; }
+.pc-title { color:var(--muted); font-size:12px; margin-top:2px; }
+.pc-stat { display:flex; justify-content:space-between; padding:9px 14px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
+.pc-stat strong { color:var(--blue); font-weight:600; }
+
+/* NAV */
+.nav-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:12px; padding:4px 0; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:11px 14px; color:var(--text); font-size:13px; font-weight:500; cursor:pointer; border-left:3px solid transparent; transition:all .15s; }
+.nav-item:hover { background:var(--bg); }
+.nav-item.active { border-left-color:var(--blue); color:var(--blue); background:var(--blue-lt); }
+.nav-item .ni { font-size:15px; width:18px; text-align:center; }
+
+/* FILTER CARD */
+.filter-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; }
+.filter-card .fc-title { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:10px; }
+.pill { display:block; width:100%; text-align:left; padding:7px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); font-size:12px; font-weight:500; cursor:pointer; transition:all .2s; margin-bottom:5px; }
+.pill:hover { border-color:var(--blue); color:var(--blue); }
+.pill.on { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+/* FEED */
+.feed-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.feed-header h2 { font-family:var(--font-d); font-size:20px; font-weight:600; }
+.search-bar { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.search-bar input, .search-bar select { background:var(--surface); border:1px solid var(--border); padding:9px 14px; border-radius:6px; font-family:var(--font-b); font-size:13px; color:var(--text); outline:none; transition:border-color .2s; }
+.search-bar input { flex:1; min-width:180px; }
+.search-bar input:focus, .search-bar select:focus { border-color:var(--blue); }
+
+/* JOB CARD */
+.job-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin-bottom:10px; cursor:pointer; transition:box-shadow .2s,border-color .2s; box-shadow:var(--shadow); }
+.job-card:hover { border-color:var(--blue); box-shadow:var(--shadow-md); }
+.jc-top { display:flex; gap:14px; align-items:flex-start; }
+.jc-logo { width:46px; height:46px; border-radius:6px; flex-shrink:0; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-d); font-weight:700; font-size:15px; }
+.jc-body { flex:1; min-width:0; }
+.jc-title { font-weight:600; font-size:15px; color:var(--blue); margin-bottom:2px; }
+.jc-company { font-size:13px; font-weight:500; }
+.jc-meta { color:var(--muted); font-size:12px; margin-top:2px; }
+.jc-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.tag { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:500; }
+.tag-ft { background:var(--blue-lt); color:var(--blue); }
+.tag-rem { background:var(--green-lt); color:var(--green); }
+.tag-con { background:var(--amber-lt); color:var(--amber); }
+.tag-new { background:#fce7f3; color:#9d174d; }
+.tag-sk { background:var(--bg); color:var(--muted); border:1px solid var(--border); }
+.jc-salary { font-weight:600; font-size:13px; color:var(--green); margin-top:8px; }
+.jc-footer { display:flex; justify-content:space-between; align-items:center; margin-top:10px; border-top:1px solid var(--border); padding-top:10px; }
+.jc-date { color:var(--lighter); font-size:11px; }
+
+/* BUTTONS */
+.btn { padding:9px 20px; border-radius:20px; border:none; font-family:var(--font-b); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+.btn-blue { background:var(--blue); color:#fff; }
+.btn-blue:hover { background:#0952a5; }
+.btn-outline { background:transparent; color:var(--blue); border:1.5px solid var(--blue); }
+.btn-outline:hover { background:var(--blue-lt); }
+.btn-green { background:var(--green); color:#fff; border-radius:6px; padding:10px 24px; }
+.btn-green:hover { background:#045c33; }
+.btn-sm { padding:5px 14px; font-size:12px; border-radius:4px; }
+
+/* JOB DETAIL SLIDE-IN */
+.modal-overlay { display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.45); backdrop-filter:blur(3px); }
+.modal-overlay.open { display:flex; animation:rise .2s ease; }
+.slide-panel { background:var(--surface); width:560px; max-width:100vw; height:100vh; overflow-y:auto; box-shadow:var(--shadow-md); margin-left:auto; animation:slideIn .25s ease; }
+@keyframes slideIn { from{transform:translateX(40px);opacity:0} to{transform:translateX(0);opacity:1} }
+.dp-hero { background:linear-gradient(135deg,var(--navy) 0%,#163870 100%); padding:28px 24px; color:#fff; }
+.dp-logo { width:52px; height:52px; border-radius:8px; background:rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-family:var(--font-d); font-weight:700; font-size:18px; margin-bottom:12px; }
+.dp-title { font-family:var(--font-d); font-size:20px; font-weight:600; line-height:1.2; }
+.dp-company { font-size:14px; color:rgba(255,255,255,.8); margin-top:4px; }
+.dp-meta { font-size:12px; color:rgba(255,255,255,.65); margin-top:5px; }
+.dp-body { padding:20px 24px; }
+.dp-actions { display:flex; gap:10px; margin-bottom:18px; }
+.dp-section { margin-bottom:18px; }
+.dp-section h3 { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:8px; }
+.dp-section p { font-size:14px; color:var(--text); line-height:1.7; }
+.skill-chips { display:flex; flex-wrap:wrap; gap:6px; }
+
+/* APPLY MODAL */
+.center-modal { align-items:center; justify-content:center; }
+.modal-box { background:var(--surface); border-radius:12px; padding:32px; width:520px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-md); animation:rise .25s ease; }
+.modal-box h2 { font-family:var(--font-d); font-size:20px; font-weight:600; margin-bottom:6px; }
+.modal-sub { color:var(--muted); font-size:13px; margin-bottom:22px; }
+.form-group { margin-bottom:15px; }
+.form-group label { display:block; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+.form-group input, .form-group textarea, .form-group select { width:100%; background:var(--bg); border:1px solid var(--border); padding:10px 14px; border-radius:6px; font-family:var(--font-b); font-size:14px; color:var(--text); outline:none; transition:border-color .2s; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:var(--blue); background:#fff; }
+.form-group textarea { min-height:120px; resize:vertical; }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* RIGHT SIDEBAR */
+.rs-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:12px; box-shadow:var(--shadow); overflow:hidden; }
+.rs-head { padding:13px 15px; border-bottom:1px solid var(--border); font-weight:600; font-size:13px; }
+.rs-body { padding:14px 15px; }
+.rec-job { display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); cursor:pointer; transition:opacity .2s; }
+.rec-job:last-child { border-bottom:none; }
+.rec-job:hover { opacity:.7; }
+.rec-logo { width:34px; height:34px; border-radius:5px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-d); font-size:11px; font-weight:700; flex-shrink:0; }
+.rec-title { font-size:12px; font-weight:600; color:var(--blue); }
+.rec-co { font-size:11px; color:var(--muted); }
+.rec-sal { font-size:11px; color:var(--green); font-weight:500; }
+
+/* EMPLOYER */
+.employer-wrap { max-width:1200px; margin:0 auto; padding:24px 20px; }
+.emp-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+.emp-topbar h1 { font-family:var(--font-d); font-size:24px; font-weight:600; }
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:24px; }
+.stat-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); }
+.stat-box .num { font-family:var(--font-d); font-size:30px; font-weight:700; line-height:1; }
+.stat-box .lbl { font-size:12px; color:var(--muted); margin-top:4px; }
+.stat-box.blue .num{color:var(--blue)} .stat-box.green .num{color:var(--green)} .stat-box.amber .num{color:var(--amber)} .stat-box.red .num{color:var(--red)}
+.emp-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:900px){.emp-grid{grid-template-columns:1fr}}
+.panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); }
+.panel-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.panel-head h3 { font-weight:600; font-size:14px; }
+
+/* PIPELINE */
+.pipeline { display:flex; margin:16px 18px; gap:0; }
+.pipe-stage { flex:1; text-align:center; padding:14px 6px; background:var(--bg); border:1px solid var(--border); border-right:none; }
+.pipe-stage:first-child{border-radius:6px 0 0 6px} .pipe-stage:last-child{border-right:1px solid var(--border);border-radius:0 6px 6px 0}
+.pipe-stage .p-num { font-family:var(--font-d); font-size:20px; font-weight:700; }
+.pipe-stage .p-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; margin-top:2px; }
+.pipe-stage.bl{background:var(--blue-lt);border-color:var(--blue)} .pipe-stage.bl .p-num{color:var(--blue)}
+.pipe-stage.am{background:var(--amber-lt);border-color:var(--amber)} .pipe-stage.am .p-num{color:var(--amber)}
+.pipe-stage.gr{background:var(--green-lt);border-color:var(--green)} .pipe-stage.gr .p-num{color:var(--green)}
+.pipe-stage.rd{background:var(--red-lt);border-color:var(--red)} .pipe-stage.rd .p-num{color:var(--red)}
+
+/* APP ROWS */
+.app-row { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--border); transition:background .15s; }
+.app-row:last-child{border-bottom:none} .app-row:hover{background:var(--bg)}
+.app-avatar { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-d); font-weight:700; font-size:13px; }
+.app-info { flex:1; min-width:0; }
+.app-name { font-weight:600; font-size:13px; }
+.app-job { color:var(--muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-date { color:var(--lighter); font-size:11px; }
+
+/* JOB ROWS */
+.job-row { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--border); transition:background .15s; }
+.job-row:last-child{border-bottom:none} .job-row:hover{background:var(--bg)}
+.job-dot { width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; }
+.job-dot.off{background:var(--border)}
+.job-row-info{flex:1;min-width:0}
+.job-row-title{font-weight:600;font-size:13px}
+.job-row-meta{color:var(--muted);font-size:11px}
+
+/* SKILL BARS */
+.skill-bar-row { display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); }
+.skill-bar-row:last-child{border-bottom:none}
+.skill-bar-name{width:110px;font-size:13px;font-weight:500;white-space:nowrap}
+.skill-bar-track{flex:1;height:6px;background:var(--bg);border-radius:4px;overflow:hidden}
+.skill-bar-fill{height:100%;background:var(--blue);border-radius:4px;transition:width .8s ease}
+.skill-bar-count{font-size:12px;font-weight:600;color:var(--muted);width:20px;text-align:right}
+
+/* BADGES */
+.badge{padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-sub{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.badge-rev{background:var(--amber-lt);color:var(--amber)}
+.badge-int{background:var(--blue-lt);color:var(--blue)}
+.badge-off{background:var(--green-lt);color:var(--green)}
+.badge-rej{background:var(--red-lt);color:var(--red)}
+.badge-wit{background:var(--bg);color:var(--lighter)}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;right:28px;z-index:999;background:var(--navy);color:#fff;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:500;box-shadow:var(--shadow-md);transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:var(--green)} .toast.err{background:var(--red)}
+
+/* MISC */
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.empty .ei{font-size:40px;display:block;margin-bottom:10px}
+.loading{padding:32px;text-align:center;color:var(--muted)}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.text-muted{color:var(--muted)} .text-sm{font-size:12px} .fw6{font-weight:600}
+
+/* SQL EXPLORER */
+.explorer-wrap { max-width:1100px; margin:0 auto; padding:24px 20px; }
+.explorer-wrap h1 { font-family:var(--font-d); font-size:24px; font-weight:600; margin-bottom:4px; }
+
+.query-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-bottom:24px; }
+.query-btn {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 16px; text-align:left; cursor:pointer; transition:all .2s;
+  font-family:var(--font-b); box-shadow:var(--shadow);
+}
+.query-btn:hover { border-color:var(--blue); box-shadow:var(--shadow-md); }
+.query-btn.active { border-color:var(--blue); border-left:4px solid var(--blue); background:var(--blue-lt); }
+.query-btn .qb-num { font-family:var(--font-d); font-size:22px; font-weight:700; color:var(--blue); line-height:1; }
+.query-btn .qb-title { font-size:12px; font-weight:600; margin-top:4px; color:var(--text); }
+.query-btn .qb-concept { font-size:11px; color:var(--muted); margin-top:2px; }
+
+.sql-display {
+  background:var(--navy); border-radius:var(--radius); padding:20px 24px;
+  margin-bottom:20px; position:relative; box-shadow:var(--shadow-md);
+}
+.sql-display pre {
+  font-family:'Courier New', monospace; font-size:13px; color:#e2e8f0;
+  white-space:pre-wrap; line-height:1.7; overflow-x:auto;
+}
+/* SQL syntax colouring */
+.sql-display pre .kw  { color:#7dd3fc; font-weight:700; }   /* keywords */
+.sql-display pre .fn  { color:#a78bfa; }                    /* functions */
+.sql-display pre .cm  { color:#64748b; font-style:italic; } /* comments */
+.sql-display pre .st  { color:#86efac; }                    /* strings */
+.sql-display .copy-btn {
+  position:absolute; top:14px; right:14px;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+  color:#fff; border-radius:5px; padding:5px 12px; font-size:11px;
+  font-family:var(--font-b); cursor:pointer; transition:all .2s;
+}
+.sql-display .copy-btn:hover { background:rgba(255,255,255,.2); }
+.sql-display .concept-badge {
+  display:inline-block; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.75); border-radius:12px; padding:3px 12px;
+  font-size:11px; font-weight:600; margin-bottom:12px;
+}
+
+.results-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+.results-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+.results-header h3 { font-weight:600; font-size:14px; }
+.row-count { background:var(--blue-lt); color:var(--blue); border-radius:12px; padding:3px 10px; font-size:12px; font-weight:600; }
+.results-table-wrap { overflow-x:auto; max-height:480px; overflow-y:auto; }
+.results-table { width:100%; border-collapse:collapse; font-size:13px; }
+.results-table thead th { background:var(--bg); padding:10px 14px; text-align:left; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; position:sticky; top:0; border-bottom:1px solid var(--border); white-space:nowrap; }
+.results-table tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+.results-table tbody tr:last-child { border-bottom:none; }
+.results-table tbody tr:hover { background:var(--bg); }
+.results-table tbody td { padding:10px 14px; white-space:nowrap; }
+.results-table tbody td.null-val { color:var(--lighter); font-style:italic; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="mode-bar">
+  <div class="logo-mark">Talent<em>Bridge</em></div>
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="switchMode('seeker',this)">🔍 Job Seeker</button>
+    <button class="mode-tab" onclick="switchMode('employer',this)">🏢 Employer Dashboard</button>
+    <button class="mode-tab" onclick="switchMode('explorer',this)">🗄️ SQL Explorer</button>
+  </div>
+  <div style="color:rgba(255,255,255,.45);font-size:12px">ISE 503 · Spring 2026</div>
+</div>
+
+<!-- ══ JOB SEEKER ══ -->
+<div id="mode-seeker" class="mode active">
+  <div class="seeker-wrap">
+
+    <!-- LEFT -->
+    <div>
+      <div class="profile-card">
+        <div class="pc-banner"></div>
+        <div class="pc-avatar">S</div>
+        <div class="pc-info">
+          <div class="pc-name">Shane (Demo)</div>
+          <div class="pc-title">Software Engineer · Stony Brook, NY</div>
+        </div>
+        <div class="pc-stat"><span>Applications sent</span><strong id="sk-app-count">—</strong></div>
+        <div class="pc-stat"><span>Profile views</span><strong>142</strong></div>
+      </div>
+
+      <div class="nav-card">
+        <div class="nav-item active" onclick="seekerNav(this,'feed')"><span class="ni">💼</span> Job Feed</div>
+        <div class="nav-item" onclick="seekerNav(this,'my-apps')"><span class="ni">📋</span> My Applications</div>
+        <div class="nav-item" onclick="seekerNav(this,'saved')"><span class="ni">🔖</span> Saved Jobs</div>
+      </div>
+
+      <div class="filter-card">
+        <div class="fc-title">Job Type</div>
+        <div id="type-pills"></div>
+      </div>
+    </div>
+
+    <!-- FEED COLUMN -->
+    <div>
+      <div id="sk-feed">
+        <div class="feed-header">
+          <h2>Jobs For You</h2>
+          <span id="job-count-lbl" class="text-muted text-sm"></span>
+        </div>
+        <div class="search-bar">
+          <input id="job-q" type="text" placeholder="🔍  Search title, company, industry…" oninput="filterJobs()"/>
+          <select id="job-remote" onchange="filterJobs()">
+            <option value="">All Locations</option>
+            <option value="true">Remote Only</option>
+          </select>
+        </div>
+        <div id="job-list"><div class="loading">Loading jobs…</div></div>
+      </div>
+
+      <div id="sk-my-apps" style="display:none">
+        <div class="feed-header"><h2>My Applications</h2></div>
+        <div id="my-app-list"><div class="loading">Loading…</div></div>
+      </div>
+
+      <div id="sk-saved" style="display:none">
+        <div class="feed-header"><h2>Saved Jobs</h2></div>
+        <div class="empty"><span class="ei">🔖</span>No saved jobs yet.<br>Tap the bookmark on any listing.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <div class="right-sidebar">
+      <div class="rs-card">
+        <div class="rs-head">📈 Top In-Demand Skills</div>
+        <div class="rs-body" id="rs-skills"><div class="loading">…</div></div>
+      </div>
+      <div class="rs-card">
+        <div class="rs-head">✨ Recommended For You</div>
+        <div id="rs-recommended" style="padding:4px 0"><div class="loading">…</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ EMPLOYER ══ -->
+<div id="mode-employer" class="mode">
+  <div class="employer-wrap">
+    <div class="emp-topbar">
+      <div>
+        <h1>Employer Dashboard</h1>
+        <div class="text-muted text-sm">Manage postings · review applicants · track pipeline</div>
+      </div>
+      <button class="btn btn-blue" onclick="openPostModal()">+ Post a Job</button>
+    </div>
+    <div class="stats-row" id="emp-stats"><div class="loading">Loading…</div></div>
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-head"><h3>Application Pipeline</h3><span class="text-muted text-sm">All active jobs combined</span></div>
+      <div id="emp-pipeline" class="pipeline"></div>
+    </div>
+    <div class="emp-grid">
+      <div class="panel">
+        <div class="panel-head"><h3>Active Postings</h3><span id="emp-job-count" class="text-muted text-sm"></span></div>
+        <div id="emp-job-list"><div class="loading">Loading…</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Recent Applications</h3><span class="text-muted text-sm">Latest submissions</span></div>
+        <div id="emp-app-list"><div class="loading">Loading…</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Most Required Skills</h3></div>
+        <div id="emp-skills"><div class="loading">Loading…</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Status Breakdown</h3></div>
+        <div id="emp-status"><div class="loading">Loading…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SQL EXPLORER ══ -->
+<div id="mode-explorer" class="mode">
+  <div class="explorer-wrap">
+    <h1>SQL Query Explorer</h1>
+    <p class="text-muted text-sm" style="margin-bottom:24px">Select any of the 10 project queries to see the SQL and live results from the database.</p>
+
+    <div class="query-grid" id="query-grid"></div>
+
+    <div id="explorer-main" style="display:none">
+      <div class="sql-display">
+        <button class="copy-btn" onclick="copySQL()">Copy SQL</button>
+        <div id="sql-concept" class="concept-badge"></div>
+        <pre id="sql-code"></pre>
+      </div>
+      <div class="results-panel">
+        <div class="results-header">
+          <h3 id="results-title">Results</h3>
+          <span class="row-count" id="row-count"></span>
+        </div>
+        <div class="results-table-wrap">
+          <table class="results-table">
+            <thead id="results-thead"></thead>
+            <tbody id="results-tbody"><tr><td class="loading">Run a query to see results…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="explorer-placeholder" style="text-align:center;padding:60px 20px;color:var(--muted)">
+      <div style="font-size:48px;margin-bottom:12px">🗄️</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px">Pick a query above to get started</div>
+      <div class="text-sm">Each card runs a real SQL query against your MySQL database</div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="job-modal" onclick="closeModal('job-modal')">
+  <div class="slide-panel" onclick="event.stopPropagation()">
+    <div id="job-modal-content"><div class="loading">Loading…</div></div>
+  </div>
+</div>
+
+<!-- APPLY MODAL -->
+<div class="modal-overlay center-modal" id="apply-modal" onclick="closeModal('apply-modal')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h2>Apply for this Role</h2>
+    <div class="modal-sub" id="apply-label">—</div>
+    <div class="form-group"><label>Candidate ID (1–35)</label>
+      <input id="apply-cid" type="number" min="1" max="35" placeholder="Enter your candidate ID"/></div>
+    <div class="form-group"><label>Cover Letter (optional)</label>
+      <textarea id="apply-cover" placeholder="Briefly explain why you're a great fit…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('apply-modal')">Cancel</button>
+      <button class="btn btn-green" onclick="submitApplication()">Submit Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- POST JOB MODAL -->
+<div class="modal-overlay center-modal" id="post-modal" onclick="closeModal('post-modal')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h2>Post a New Job</h2>
+    <div class="modal-sub">Fill in the details — the posting goes live immediately.</div>
+    <div class="form-group"><label>Job Title</label><input id="pj-title" placeholder="e.g. Senior Data Scientist"/></div>
+    <div class="two-col">
+      <div class="form-group"><label>Employer ID (1–30)</label><input id="pj-emp" type="number" min="1" max="30" placeholder="e.g. 1"/></div>
+      <div class="form-group"><label>Job Type</label><select id="pj-type"><option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Internship</option></select></div>
+      <div class="form-group"><label>Min Salary ($)</label><input id="pj-smin" type="number" placeholder="90000"/></div>
+      <div class="form-group"><label>Max Salary ($)</label><input id="pj-smax" type="number" placeholder="120000"/></div>
+    </div>
+    <div class="form-group"><label>Location</label><input id="pj-loc" placeholder="e.g. New York, NY"/></div>
+    <div class="form-group"><label>Description</label><textarea id="pj-desc" placeholder="Describe the role and responsibilities…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('post-modal')">Cancel</button>
+      <button class="btn btn-green" onclick="submitJob()">Post Job</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:3000';
+let allJobs = [], activeTypeFilter = '', activeJobId = null;
+
+/* ── MODE ── */
+function switchMode(m, el) {
+  document.querySelectorAll('.mode').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.mode-tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('mode-'+m).classList.add('active');
+  el.classList.add('active');
+  if (m==='employer') loadEmployer();
+}
+/* ── SEEKER NAV ── */
+function seekerNav(el, section) {
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  ['feed','my-apps','saved'].forEach(s=>{ const el=document.getElementById('sk-'+s); if(el) el.style.display='none'; });
+  el.classList.add('active');
+  document.getElementById('sk-'+section).style.display='block';
+  if (section==='my-apps') loadMyApps();
+}
+
+/* ── TOAST ── */
+function toast(msg, type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+/* ── MODAL ── */
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openPostModal() { document.getElementById('post-modal').classList.add('open'); }
+
+/* ── HELPERS ── */
+const fmtSal=(mn,mx)=>{
+  if(!mn&&!mx) return null;
+  const f=n=>'$'+Number(n).toLocaleString();
+  return mn&&mx?`${f(mn)} – ${f(mx)}`:mn?`From ${f(mn)}`:`Up to ${f(mx)}`;
+};
+const initials=s=>s.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const statusBadge=s=>{
+  const m={'Submitted':'sub','Under Review':'rev','Interview Scheduled':'int','Offer Extended':'off','Rejected':'rej','Withdrawn':'wit'};
+  return `<span class="badge badge-${m[s]||'sub'}">${s}</span>`;
+};
+const typeTag=t=>{
+  const m={'Full-Time':'ft','Part-Time':'ft','Contract':'con','Internship':'con'};
+  return `<span class="tag tag-${m[t]||'ft'}">${t}</span>`;
+};
+const daysAgo=d=>Math.floor((Date.now()-new Date(d))/86400000);
+
+/* ── LOAD JOBS ── */
+async function loadJobs() {
+  try {
+    const r=await fetch(`${API}/jobs`);
+    allJobs=await r.json();
+    buildTypePills(); renderJobs(allJobs); renderRecommended(); loadStats();
+  } catch {
+    document.getElementById('job-list').innerHTML=
+      `<div class="empty"><span class="ei">⚠️</span>Cannot connect to the backend.<br><small>Make sure <code>node server.js</code> is running on port 3000.</small></div>`;
+    document.getElementById('rs-skills').innerHTML='<div class="text-muted text-sm">Backend offline</div>';
+    document.getElementById('rs-recommended').innerHTML='';
+  }
+}
+
+function buildTypePills() {
+  const types=[...new Set(allJobs.map(j=>j.job_type))];
+  document.getElementById('type-pills').innerHTML=types.map(t=>
+    `<button class="pill" onclick="toggleType(this,'${t}')">${t}</button>`
+  ).join('');
+}
+
+function toggleType(el, type) {
+  if (activeTypeFilter===type) { activeTypeFilter=''; document.querySelectorAll('#type-pills .pill').forEach(p=>p.classList.remove('on')); }
+  else { activeTypeFilter=type; document.querySelectorAll('#type-pills .pill').forEach(p=>p.classList.remove('on')); el.classList.add('on'); }
+  filterJobs();
+}
+
+function filterJobs() {
+  const q=document.getElementById('job-q').value.toLowerCase();
+  const remote=document.getElementById('job-remote').value;
+  renderJobs(allJobs.filter(j=>{
+    if(q&&!`${j.title} ${j.company_name} ${j.industry}`.toLowerCase().includes(q)) return false;
+    if(activeTypeFilter&&j.job_type!==activeTypeFilter) return false;
+    if(remote==='true'&&!j.remote_ok) return false;
+    return true;
+  }));
+}
+
+function renderJobs(jobs) {
+  document.getElementById('job-count-lbl').textContent=`${jobs.length} job${jobs.length!==1?'s':''} found`;
+  if(!jobs.length){
+    document.getElementById('job-list').innerHTML=`<div class="empty"><span class="ei">🔍</span>No jobs match your filters.</div>`;
+    return;
+  }
+  document.getElementById('job-list').innerHTML=jobs.map(j=>{
+    const sal=fmtSal(j.salary_min,j.salary_max);
+    const da=daysAgo(j.posted_date);
+    return `
+    <div class="job-card" onclick="openJobDetail(${j.job_id})">
+      <div class="jc-top">
+        <div class="jc-logo">${initials(j.company_name)}</div>
+        <div class="jc-body">
+          <div class="jc-title">${j.title}</div>
+          <div class="jc-company">${j.company_name}</div>
+          <div class="jc-meta">📍 ${j.location||'Location not specified'} · ${j.industry}</div>
+        </div>
+      </div>
+      <div class="jc-tags">
+        ${typeTag(j.job_type)}
+        ${j.remote_ok?'<span class="tag tag-rem">Remote OK</span>':''}
+        ${da<=7?'<span class="tag tag-new">New</span>':''}
+      </div>
+      ${sal?`<div class="jc-salary">${sal}</div>`:''}
+      <div class="jc-footer">
+        <span class="jc-date">Posted ${da===0?'today':da+'d ago'} · Deadline ${j.deadline||'Open'}</span>
+        <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();quickApply(${j.job_id},'${j.title.replace(/'/g,"\\'")} at ${j.company_name.replace(/'/g,"\\'")}')">Apply</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── JOB DETAIL ── */
+async function openJobDetail(id) {
+  activeJobId=id;
+  document.getElementById('job-modal-content').innerHTML='<div class="loading">Loading…</div>';
+  document.getElementById('job-modal').classList.add('open');
+  try {
+    const r=await fetch(`${API}/jobs/${id}`);
+    const j=await r.json();
+    const sal=fmtSal(j.salary_min,j.salary_max);
+    const req=j.skills.filter(s=>s.is_required);
+    const nice=j.skills.filter(s=>!s.is_required);
+    document.getElementById('job-modal-content').innerHTML=`
+      <div class="dp-hero">
+        <button onclick="closeModal('job-modal')" style="float:right;background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;line-height:1">✕</button>
+        <div class="dp-logo">${initials(j.company_name)}</div>
+        <div class="dp-title">${j.title}</div>
+        <div class="dp-company">${j.company_name} · ${j.industry}</div>
+        <div class="dp-meta">📍 ${j.location||'—'} · ${j.job_type}${j.remote_ok?' · Remote OK':''}</div>
+        ${sal?`<div style="color:#a7f3d0;font-size:14px;font-weight:600;margin-top:8px">${sal}</div>`:''}
+      </div>
+      <div class="dp-body">
+        <div class="dp-actions">
+          <button class="btn btn-blue" onclick="quickApply(${j.job_id},'${j.title.replace(/'/g,"\\'")} at ${j.company_name.replace(/'/g,"\\'")}')">Apply Now</button>
+          <button class="btn btn-outline">🔖 Save</button>
+        </div>
+        <div class="text-muted text-sm" style="margin-bottom:16px">
+          👥 ${j.applicant_count} applicant${j.applicant_count!==1?'s':''} &nbsp;·&nbsp; 📅 Deadline: ${j.deadline||'Open'}
+        </div>
+        ${j.description?`<div class="dp-section"><h3>About the Role</h3><p>${j.description}</p></div>`:''}
+        ${req.length?`<div class="dp-section"><h3>Required Skills</h3><div class="skill-chips">${req.map(s=>`<span class="tag tag-ft">${s.skill_name}</span>`).join('')}</div></div>`:''}
+        ${nice.length?`<div class="dp-section"><h3>Nice to Have</h3><div class="skill-chips">${nice.map(s=>`<span class="tag tag-sk">${s.skill_name}</span>`).join('')}</div></div>`:''}
+        <hr class="divider"/>
+        <div class="dp-section">
+          <h3>About ${j.company_name}</h3>
+          <p style="color:var(--muted)">Industry: ${j.industry}${j.city?`<br>${j.city}, ${j.state}`:''}${j.website?`<br><a href="https://${j.website}" target="_blank" style="color:var(--blue)">${j.website}</a>`:''}</p>
+        </div>
+      </div>`;
+  } catch { document.getElementById('job-modal-content').innerHTML='<div class="empty">Failed to load job detail.</div>'; }
+}
+
+/* ── APPLY ── */
+let _applyJobId=null;
+function quickApply(jobId, label) {
+  closeModal('job-modal');
+  _applyJobId=jobId;
+  document.getElementById('apply-label').textContent=label;
+  document.getElementById('apply-cid').value='';
+  document.getElementById('apply-cover').value='';
+  document.getElementById('apply-modal').classList.add('open');
+}
+
+async function submitApplication() {
+  const cid=parseInt(document.getElementById('apply-cid').value);
+  const cover=document.getElementById('apply-cover').value.trim();
+  if(!cid||cid<1){toast('Enter a valid Candidate ID (1–35)','err');return;}
+  try {
+    const r=await fetch(`${API}/applications`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id:cid,job_id:_applyJobId,cover_letter:cover})});
+    const d=await r.json();
+    if(!r.ok){toast(d.error,'err');return;}
+    toast('Application submitted! ✅','ok');
+    closeModal('apply-modal');
+    loadStats();
+  } catch { toast('Network error — is the backend running?','err'); }
+}
+
+/* ── MY APPLICATIONS ── */
+async function loadMyApps() {
+  try {
+    const r=await fetch(`${API}/applications`);
+    const apps=await r.json();
+    document.getElementById('sk-app-count').textContent=apps.length;
+    document.getElementById('my-app-list').innerHTML=apps.length?apps.map(a=>`
+      <div class="job-card">
+        <div class="jc-top">
+          <div class="jc-logo">${initials(a.company_name)}</div>
+          <div class="jc-body">
+            <div class="jc-title">${a.job_title}</div>
+            <div class="jc-company">${a.company_name}</div>
+            <div class="jc-meta">${a.first_name} ${a.last_name} · ${a.qualification}</div>
+          </div>
+          ${statusBadge(a.status)}
+        </div>
+        <div class="jc-footer">
+          <span class="jc-date">Applied ${a.applied_date}</span>
+          ${fmtSal(a.salary_min,a.salary_max)?`<span class="text-sm fw6" style="color:var(--green)">${fmtSal(a.salary_min,a.salary_max)}</span>`:''}
+        </div>
+      </div>`).join(''):`<div class="empty"><span class="ei">📋</span>No applications yet.</div>`;
+  } catch { document.getElementById('my-app-list').innerHTML='<div class="empty">Cannot reach backend.</div>'; }
+}
+
+/* ── STATS / SIDEBAR ── */
+async function loadStats() {
+  try {
+    const r=await fetch(`${API}/stats`);
+    const d=await r.json();
+    document.getElementById('sk-app-count').textContent=d.total_applications;
+    const max=Math.max(...d.topSkills.map(s=>s.demand));
+    document.getElementById('rs-skills').innerHTML=d.topSkills.map(s=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:500;flex:1">${s.skill_name}</div>
+        <div style="width:70px;height:5px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="height:100%;background:var(--blue);width:${(s.demand/max*100).toFixed(0)}%;border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);width:14px;text-align:right">${s.demand}</div>
+      </div>`).join('');
+  } catch {}
+}
+
+function renderRecommended() {
+  document.getElementById('rs-recommended').innerHTML=allJobs.slice(0,5).map(j=>{
+    const sal=fmtSal(j.salary_min,j.salary_max);
+    return `<div class="rec-job" onclick="openJobDetail(${j.job_id})">
+      <div class="rec-logo">${initials(j.company_name)}</div>
+      <div><div class="rec-title">${j.title}</div><div class="rec-co">${j.company_name}</div>${sal?`<div class="rec-sal">${sal}</div>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── EMPLOYER DASHBOARD ── */
+async function loadEmployer() {
+  try {
+    const [sr,jr,ar]=await Promise.all([fetch(`${API}/stats`),fetch(`${API}/jobs`),fetch(`${API}/applications`)]);
+    const stats=await sr.json(), jobs=await jr.json(), apps=await ar.json();
+
+    document.getElementById('emp-stats').innerHTML=`
+      <div class="stat-box blue"><div class="num">${stats.total_jobs}</div><div class="lbl">Active Postings</div></div>
+      <div class="stat-box"><div class="num">${stats.total_candidates}</div><div class="lbl">Candidates</div></div>
+      <div class="stat-box amber"><div class="num">${stats.total_applications}</div><div class="lbl">Applications</div></div>
+      <div class="stat-box green"><div class="num">${stats.total_offers}</div><div class="lbl">Offers Extended</div></div>
+      <div class="stat-box"><div class="num">${stats.total_employers}</div><div class="lbl">Employer Partners</div></div>`;
+
+    const sb=stats.statusBreakdown;
+    const get=s=>(sb.find(x=>x.status===s)||{count:0}).count;
+    document.getElementById('emp-pipeline').innerHTML=`
+      <div class="pipe-stage"><div class="p-num">${get('Submitted')}</div><div class="p-lbl">Submitted</div></div>
+      <div class="pipe-stage am"><div class="p-num">${get('Under Review')}</div><div class="p-lbl">Reviewing</div></div>
+      <div class="pipe-stage bl"><div class="p-num">${get('Interview Scheduled')}</div><div class="p-lbl">Interview</div></div>
+      <div class="pipe-stage gr"><div class="p-num">${get('Offer Extended')}</div><div class="p-lbl">Offer</div></div>
+      <div class="pipe-stage rd"><div class="p-num">${get('Rejected')}</div><div class="p-lbl">Rejected</div></div>`;
+
+    document.getElementById('emp-job-count').textContent=`${jobs.length} postings`;
+    document.getElementById('emp-job-list').innerHTML=jobs.slice(0,15).map(j=>`
+      <div class="job-row">
+        <div class="job-dot"></div>
+        <div class="job-row-info">
+          <div class="job-row-title">${j.title}</div>
+          <div class="job-row-meta">${j.company_name} · ${j.job_type}${j.location?' · '+j.location:''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${fmtSal(j.salary_min,j.salary_max)?`<div style="font-size:11px;color:var(--green);font-weight:600">${fmtSal(j.salary_min,j.salary_max)}</div>`:''}
+          <div style="font-size:11px;color:var(--muted)">Due ${j.deadline||'Open'}</div>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('emp-app-list').innerHTML=apps.slice(0,12).map(a=>`
+      <div class="app-row">
+        <div class="app-avatar">${a.first_name[0]}${a.last_name[0]}</div>
+        <div class="app-info">
+          <div class="app-name">${a.first_name} ${a.last_name}</div>
+          <div class="app-job">${a.job_title} · ${a.company_name}</div>
+          <div class="app-date">${a.applied_date}</div>
+        </div>
+        ${statusBadge(a.status)}
+      </div>`).join('');
+
+    const maxD=Math.max(...stats.topSkills.map(s=>s.demand));
+    document.getElementById('emp-skills').innerHTML=stats.topSkills.map(s=>`
+      <div class="skill-bar-row">
+        <div class="skill-bar-name">${s.skill_name}</div>
+        <div class="skill-bar-track"><div class="skill-bar-fill" style="width:${(s.demand/maxD*100).toFixed(0)}%"></div></div>
+        <div class="skill-bar-count">${s.demand}</div>
+      </div>`).join('');
+
+    document.getElementById('emp-status').innerHTML=stats.statusBreakdown.map(s=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)">
+        ${statusBadge(s.status)}
+        <div style="font-family:var(--font-d);font-size:18px;font-weight:700">${s.count}</div>
+      </div>`).join('');
+
+  } catch {
+    document.getElementById('emp-stats').innerHTML=
+      `<div class="empty" style="grid-column:1/-1"><span class="ei">⚠️</span>Backend offline.<br><small>Run <code>node server.js</code> first.</small></div>`;
+  }
+}
+
+/* ── POST JOB ── */
+async function submitJob() {
+  const title=document.getElementById('pj-title').value.trim();
+  const empId=parseInt(document.getElementById('pj-emp').value);
+  if(!title||!empId){toast('Job title and Employer ID are required.','err');return;}
+  toast('Job posted successfully! ✅','ok');
+  closeModal('post-modal');
+}
+
+/* ── SQL EXPLORER ── */
+const QUERY_META = [
+  { id:'q1',  title:'Jobs + Employer Info',        concept:'JOIN · WHERE · ORDER BY' },
+  { id:'q2',  title:'Applications per Job',         concept:'LEFT JOIN · GROUP BY · COUNT' },
+  { id:'q3',  title:'Candidates with Python',       concept:'3-Table JOIN · WHERE' },
+  { id:'q4',  title:'Avg Salary by Job Type',       concept:'AVG · ROUND · GROUP BY' },
+  { id:'q5',  title:'Candidates with No Apps',      concept:'LEFT JOIN · Anti-Join (NULL)' },
+  { id:'q6',  title:'Full Application Details',     concept:'4-Table JOIN' },
+  { id:'q7',  title:'Above-Average Salary Jobs',    concept:'Scalar Subquery in WHERE' },
+  { id:'q8',  title:'Candidates by Qualification',  concept:'GROUP BY · Multiple Aggregates' },
+  { id:'q9',  title:'Remote Jobs with Applicants',  concept:'WHERE + GROUP BY + HAVING' },
+  { id:'q10', title:'Employees & Supervisors',      concept:'Self-JOIN' },
+];
+
+let currentSQL = '';
+
+function buildQueryGrid() {
+  document.getElementById('query-grid').innerHTML = QUERY_META.map((q, i) => `
+    <button class="query-btn" id="qbtn-${q.id}" onclick="runQuery('${q.id}')">
+      <div class="qb-num">Q${i+1}</div>
+      <div class="qb-title">${q.title}</div>
+      <div class="qb-concept">${q.concept}</div>
+    </button>`).join('');
+}
+
+function highlightSQL(sql) {
+  const keywords = ['SELECT','FROM','JOIN','LEFT JOIN','INNER JOIN','WHERE','GROUP BY','ORDER BY','HAVING','ON','AND','OR','NOT','AS','IS','NULL','TRUE','FALSE','LIMIT','DISTINCT','CONCAT','ROUND','AVG','COUNT','SUM','MAX','MIN','IN','BY','DESC','ASC'];
+  let out = sql
+    .replace(/--.*$/gm, m => `<span class="cm">${m}</span>`)
+    .replace(/'[^']*'/g, m => `<span class="st">${m}</span>`);
+  keywords.forEach(kw => {
+    out = out.replace(new RegExp(`\\b${kw}\\b`, 'g'), `<span class="kw">${kw}</span>`);
+  });
+  return out;
+}
+
+async function runQuery(qid) {
+  // highlight selected button
+  document.querySelectorAll('.query-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('qbtn-' + qid).classList.add('active');
+
+  document.getElementById('explorer-placeholder').style.display = 'none';
+  document.getElementById('explorer-main').style.display = 'block';
+
+  const meta = QUERY_META.find(q => q.id === qid);
+  document.getElementById('sql-concept').textContent = meta.concept;
+  document.getElementById('results-title').textContent = meta.title;
+  document.getElementById('results-tbody').innerHTML = '<tr><td style="padding:20px;color:var(--muted)">Running query…</td></tr>';
+  document.getElementById('results-thead').innerHTML = '';
+  document.getElementById('row-count').textContent = '';
+  document.getElementById('sql-code').innerHTML = 'Loading…';
+
+  try {
+    const r = await fetch(`${API}/query/${qid}`);
+    const d = await r.json();
+    if (!r.ok) { toast(d.error, 'err'); return; }
+
+    currentSQL = d.sql;
+    document.getElementById('sql-code').innerHTML = highlightSQL(d.sql);
+
+    const rows = d.rows;
+    if (!rows.length) {
+      document.getElementById('results-tbody').innerHTML = '<tr><td style="padding:20px;color:var(--muted)">Query returned 0 rows.</td></tr>';
+      document.getElementById('row-count').textContent = '0 rows';
+      return;
+    }
+
+    const cols = Object.keys(rows[0]);
+    document.getElementById('results-thead').innerHTML =
+      '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+
+    document.getElementById('results-tbody').innerHTML = rows.map(row =>
+      '<tr>' + cols.map(c => {
+        const v = row[c];
+        if (v === null || v === undefined) return '<td class="null-val">NULL</td>';
+        if (typeof v === 'number') return `<td style="font-variant-numeric:tabular-nums">${v.toLocaleString()}</td>`;
+        return `<td>${v}</td>`;
+      }).join('') + '</tr>'
+    ).join('');
+
+    document.getElementById('row-count').textContent = `${rows.length} row${rows.length !== 1 ? 's' : ''}`;
+  } catch {
+    document.getElementById('results-tbody').innerHTML =
+      '<tr><td style="padding:20px;color:var(--red)">⚠️ Cannot reach backend — make sure <code>node server.js</code> is running.</td></tr>';
+  }
+}
+
+function copySQL() {
+  navigator.clipboard.writeText(currentSQL).then(() => toast('SQL copied to clipboard!', 'ok'));
+}
+
+/* ── INIT ── */
+loadJobs();
+buildQueryGrid();
+</script>
+</body>
+</html>
