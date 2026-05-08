@@ -307,8 +307,20 @@ body { background:var(--bg); color:var(--text); font-family:var(--font-b); font-
       </div>
 
       <div class="filter-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span class="fc-title" style="margin-bottom:0">Filters</span>
+          <button onclick="clearFilters()" style="background:none;border:none;font-size:11px;color:var(--muted);cursor:pointer;padding:0;text-decoration:underline">Clear all</button>
+        </div>
         <div class="fc-title">Job Type</div>
         <div id="type-pills"></div>
+        <div class="fc-title" style="margin-top:14px">Industry</div>
+        <div id="industry-pills"></div>
+        <div class="fc-title" style="margin-top:14px">Min Salary</div>
+        <div id="salary-pills"></div>
+        <div class="fc-title" style="margin-top:14px">Posted</div>
+        <div id="recency-pills"></div>
+        <div class="fc-title" style="margin-top:14px">Sort By</div>
+        <div id="sort-pills"></div>
       </div>
     </div>
 
@@ -437,7 +449,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font-b); font-
   <div class="modal-box" onclick="event.stopPropagation()">
     <h2>Apply for this Role</h2>
     <div class="modal-sub" id="apply-label">—</div>
-    <div class="form-group"><label>Candidate ID (1–35)</label>
+    <div class="form-group"><label>Candidate ID (demo default: 1)</label>
       <input id="apply-cid" type="number" min="1" max="35" placeholder="Enter your candidate ID"/></div>
     <div class="form-group"><label>Cover Letter (optional)</label>
       <textarea id="apply-cover" placeholder="Briefly explain why you're a great fit…"></textarea></div>
@@ -474,6 +486,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--font-b); font-
 <script>
 const API = 'http://localhost:3000';
 let allJobs = [], activeTypeFilter = '', activeJobId = null;
+let activeIndustryFilter='', activeSalaryMin=0, activeRecencyDays=0, activeSortBy='newest';
+let savedJobIds = new Set(JSON.parse(localStorage.getItem('savedJobs')||'[]'));
+function persistSaved() { localStorage.setItem('savedJobs', JSON.stringify([...savedJobIds])); }
 
 /* ── MODE ── */
 function switchMode(m, el) {
@@ -490,7 +505,10 @@ function seekerNav(el, section) {
   el.classList.add('active');
   document.getElementById('sk-'+section).style.display='block';
   if (section==='my-apps') loadMyApps();
+  if (section==='saved') renderSavedJobs();
 }
+
+function goFeed() { seekerNav(document.querySelector('.nav-card .nav-item'), 'feed'); }
 
 /* ── TOAST ── */
 function toast(msg, type='') {
@@ -525,7 +543,7 @@ async function loadJobs() {
   try {
     const r=await fetch(`${API}/jobs`);
     allJobs=await r.json();
-    buildTypePills(); renderJobs(allJobs); renderRecommended(); loadStats();
+    buildTypePills(); buildFilterPills(); renderJobs(allJobs); renderRecommended(); loadStats();
   } catch {
     document.getElementById('job-list').innerHTML=
       `<div class="empty"><span class="ei">⚠️</span>Cannot connect to the backend.<br><small>Make sure <code>node server.js</code> is running on port 3000.</small></div>`;
@@ -541,21 +559,95 @@ function buildTypePills() {
   ).join('');
 }
 
+function buildFilterPills() {
+  const industries=[...new Set(allJobs.map(j=>j.industry).filter(Boolean))].sort();
+  document.getElementById('industry-pills').innerHTML=industries.map(i=>
+    `<button class="pill" onclick="toggleIndustry(this,'${i.replace(/'/g,"\\'")}')">${i}</button>`
+  ).join('');
+
+  const salaryOpts=[['Any',0],['$50k+',50000],['$80k+',80000],['$100k+',100000],['$150k+',150000]];
+  document.getElementById('salary-pills').innerHTML=salaryOpts.map(([lbl,val])=>
+    `<button class="pill${val===0?' on':''}" onclick="toggleSalary(this,${val})">${lbl}</button>`
+  ).join('');
+
+  const recencyOpts=[['Any time',0],['Past week',7],['Past month',30]];
+  document.getElementById('recency-pills').innerHTML=recencyOpts.map(([lbl,val])=>
+    `<button class="pill${val===0?' on':''}" onclick="toggleRecency(this,${val})">${lbl}</button>`
+  ).join('');
+
+  const sortOpts=[['Newest','newest'],['Salary ↑','sal-asc'],['Salary ↓','sal-desc'],['Deadline','deadline']];
+  document.getElementById('sort-pills').innerHTML=sortOpts.map(([lbl,val])=>
+    `<button class="pill${val==='newest'?' on':''}" onclick="toggleSort(this,'${val}')">${lbl}</button>`
+  ).join('');
+}
+
 function toggleType(el, type) {
   if (activeTypeFilter===type) { activeTypeFilter=''; document.querySelectorAll('#type-pills .pill').forEach(p=>p.classList.remove('on')); }
   else { activeTypeFilter=type; document.querySelectorAll('#type-pills .pill').forEach(p=>p.classList.remove('on')); el.classList.add('on'); }
-  filterJobs();
+  goFeed(); filterJobs();
 }
 
 function filterJobs() {
   const q=document.getElementById('job-q').value.toLowerCase();
   const remote=document.getElementById('job-remote').value;
-  renderJobs(allJobs.filter(j=>{
+  let jobs=allJobs.filter(j=>{
     if(q&&!`${j.title} ${j.company_name} ${j.industry}`.toLowerCase().includes(q)) return false;
     if(activeTypeFilter&&j.job_type!==activeTypeFilter) return false;
     if(remote==='true'&&!j.remote_ok) return false;
+    if(activeIndustryFilter&&j.industry!==activeIndustryFilter) return false;
+    if(activeSalaryMin>0){
+      const hi=j.salary_max||0, lo=j.salary_min||0;
+      if(!hi&&!lo) return false;
+      if(Math.max(hi,lo)<activeSalaryMin) return false;
+    }
+    if(activeRecencyDays>0&&daysAgo(j.posted_date)>activeRecencyDays) return false;
     return true;
-  }));
+  });
+  if(activeSortBy==='sal-desc') jobs.sort((a,b)=>(b.salary_max||b.salary_min||0)-(a.salary_max||a.salary_min||0));
+  else if(activeSortBy==='sal-asc') jobs.sort((a,b)=>{
+    const av=a.salary_min||a.salary_max||0, bv=b.salary_min||b.salary_max||0;
+    if(!av&&bv) return 1; if(av&&!bv) return -1; return av-bv;
+  });
+  else if(activeSortBy==='deadline') jobs.sort((a,b)=>{
+    if(!a.deadline&&b.deadline) return 1; if(a.deadline&&!b.deadline) return -1;
+    if(!a.deadline&&!b.deadline) return 0;
+    return new Date(a.deadline)-new Date(b.deadline);
+  });
+  renderJobs(jobs);
+}
+
+function toggleIndustry(el, industry) {
+  if(activeIndustryFilter===industry){activeIndustryFilter='';document.querySelectorAll('#industry-pills .pill').forEach(p=>p.classList.remove('on'));}
+  else{activeIndustryFilter=industry;document.querySelectorAll('#industry-pills .pill').forEach(p=>p.classList.remove('on'));el.classList.add('on');}
+  goFeed(); filterJobs();
+}
+function toggleSalary(el, val) {
+  activeSalaryMin=val;
+  document.querySelectorAll('#salary-pills .pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  goFeed(); filterJobs();
+}
+function toggleRecency(el, val) {
+  activeRecencyDays=val;
+  document.querySelectorAll('#recency-pills .pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  goFeed(); filterJobs();
+}
+function toggleSort(el, val) {
+  activeSortBy=val;
+  document.querySelectorAll('#sort-pills .pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  goFeed(); filterJobs();
+}
+function clearFilters() {
+  activeTypeFilter=''; activeIndustryFilter=''; activeSalaryMin=0; activeRecencyDays=0; activeSortBy='newest';
+  document.querySelectorAll('#type-pills .pill,#industry-pills .pill,#salary-pills .pill,#recency-pills .pill,#sort-pills .pill').forEach(p=>p.classList.remove('on'));
+  document.querySelector('#salary-pills .pill')?.classList.add('on');
+  document.querySelector('#recency-pills .pill')?.classList.add('on');
+  document.querySelector('#sort-pills .pill')?.classList.add('on');
+  document.getElementById('job-q').value='';
+  document.getElementById('job-remote').value='';
+  goFeed(); filterJobs();
 }
 
 function renderJobs(jobs) {
@@ -614,7 +706,7 @@ async function openJobDetail(id) {
       <div class="dp-body">
         <div class="dp-actions">
           <button class="btn btn-blue" onclick="quickApply(${j.job_id},'${j.title.replace(/'/g,"\\'")} at ${j.company_name.replace(/'/g,"\\'")}')">Apply Now</button>
-          <button class="btn btn-outline">🔖 Save</button>
+          <button class="btn btn-outline" onclick="toggleSave(${j.job_id})">${savedJobIds.has(j.job_id)?'✅ Saved':'🔖 Save'}</button>
         </div>
         <div class="text-muted text-sm" style="margin-bottom:16px">
           👥 ${j.applicant_count} applicant${j.applicant_count!==1?'s':''} &nbsp;·&nbsp; 📅 Deadline: ${j.deadline||'Open'}
@@ -637,7 +729,7 @@ function quickApply(jobId, label) {
   closeModal('job-modal');
   _applyJobId=jobId;
   document.getElementById('apply-label').textContent=label;
-  document.getElementById('apply-cid').value='';
+  document.getElementById('apply-cid').value='1';
   document.getElementById('apply-cover').value='';
   document.getElementById('apply-modal').classList.add('open');
 }
@@ -656,6 +748,46 @@ async function submitApplication() {
   } catch { toast('Network error — is the backend running?','err'); }
 }
 
+/* ── SAVE JOBS ── */
+function toggleSave(id) {
+  if (savedJobIds.has(id)) { savedJobIds.delete(id); toast('Job removed from saved','ok'); }
+  else { savedJobIds.add(id); toast('Job saved! 🔖','ok'); }
+  persistSaved();
+  renderSavedJobs();
+}
+
+function renderSavedJobs() {
+  const saved=allJobs.filter(j=>savedJobIds.has(j.job_id));
+  const el=document.getElementById('sk-saved');
+  if(!el) return;
+  el.innerHTML=`<div class="feed-header"><h2>Saved Jobs</h2></div>`+(saved.length?saved.map(j=>{
+    const sal=fmtSal(j.salary_min,j.salary_max);
+    const da=daysAgo(j.posted_date);
+    return `<div class="job-card" onclick="openJobDetail(${j.job_id})">
+      <div class="jc-top">
+        <div class="jc-logo">${initials(j.company_name)}</div>
+        <div class="jc-body">
+          <div class="jc-title">${j.title}</div>
+          <div class="jc-company">${j.company_name}</div>
+          <div class="jc-meta">📍 ${j.location||'Location not specified'} · ${j.industry}</div>
+        </div>
+      </div>
+      <div class="jc-tags">
+        ${typeTag(j.job_type)}
+        ${j.remote_ok?'<span class="tag tag-rem">Remote OK</span>':''}
+      </div>
+      ${sal?`<div class="jc-salary">${sal}</div>`:''}
+      <div class="jc-footer">
+        <span class="jc-date">Posted ${da===0?'today':da+'d ago'}</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();quickApply(${j.job_id},'${j.title.replace(/'/g,"\\'")} at ${j.company_name.replace(/'/g,"\\'")}')">Apply</button>
+          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();toggleSave(${j.job_id})">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join(''):`<div class="empty"><span class="ei">🔖</span>No saved jobs yet.<br>Tap the bookmark on any listing.</div>`);
+}
+
 /* ── MY APPLICATIONS ── */
 async function loadMyApps() {
   try {
@@ -663,7 +795,7 @@ async function loadMyApps() {
     const apps=await r.json();
     document.getElementById('sk-app-count').textContent=apps.length;
     document.getElementById('my-app-list').innerHTML=apps.length?apps.map(a=>`
-      <div class="job-card">
+      <div class="job-card" onclick="openJobDetail(${a.job_id})">
         <div class="jc-top">
           <div class="jc-logo">${initials(a.company_name)}</div>
           <div class="jc-body">
@@ -881,4 +1013,5 @@ loadJobs();
 buildQueryGrid();
 </script>
 </body>
+
 </html>
